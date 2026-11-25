@@ -1,4 +1,4 @@
-
+import ChessBoard from './ChessBoard'
 import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -52,6 +52,16 @@ function App() {
     const [error, setError] = useState('')
     const [analysis, setAnalysis] = useState<GameAnalysis | null>(null)
     const [game, setGame] = useState<ImportedGame | null>(null)
+    const [currentMoveIndex, setCurrentMoveIndex] = useState(0)
+    const currentPosition = game
+        ? currentMoveIndex === 0
+            ? game.initialPosition
+            : game.moves[currentMoveIndex - 1].fen
+        : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+
+    const currentMove = game && currentMoveIndex > 0
+        ? game.moves[currentMoveIndex - 1]
+        : null
     const handleAnalyze = async () => {
         if (!pgn.trim()) return
 
@@ -75,6 +85,9 @@ function App() {
             }
 
             const importedGame: ImportedGame = await importResponse.json()
+
+            setGame(importedGame)
+            setCurrentMoveIndex(0)
 
             setGame(importedGame)
 
@@ -120,7 +133,7 @@ function App() {
                 </div>
 
                 < nav >
-                    <a href="#analizar" > {isAnalyzing ? 'Analizando...' : 'Analizar partida'} </a>
+                    <a href="#analizar" > Analizar partida </a>
                 </nav>
             </header>
 
@@ -247,38 +260,67 @@ function App() {
                         </button>
                     </section>
                 )}
+                <div className="analysis-workspace">
 
-                < section className="import-card" >
-                    <div className="card-heading" >
-                        <div className="card-icon" >
-                            <FontAwesomeIcon icon={faFileImport} />
+                    <section className="chessboard-section">
+                        <h2>Tablero de análisis</h2>
+
+                        <ChessBoard position={currentPosition} />
+
+                        <div className="board-controls">
+                            <button
+                                onClick={() => setCurrentMoveIndex(index => Math.max(0, index - 1))}
+                                disabled={!game || currentMoveIndex === 0}
+                            >
+                                Anterior
+                            </button>
+
+                            <span>
+                                {currentMove
+                                    ? `${currentMove.moveNumber}${currentMove.player === 'White' ? '.' : '...'} ${currentMove.san}`
+                                    : 'Posición inicial'}
+                            </span>
+
+                            <button
+                                onClick={() => setCurrentMoveIndex(index => Math.min(game!.moves.length, index + 1))}
+                                disabled={!game || currentMoveIndex >= game.moves.length}
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    </section>
+
+                    <section className="import-card">
+                        <div className="card-heading">
+                            <div className="card-icon">
+                                <FontAwesomeIcon icon={faFileImport} />
+                            </div>
+
+                            <div>
+                                <h2>Importar partida</h2>
+                                <p>Pega el PGN de tu partida para comenzar.</p>
+                            </div>
                         </div>
 
-                        < div >
-                            <h2>Importar partida </h2>
-                            < p > Pega el PGN de tu partida para comenzar.</p>
+                        <textarea
+                            value={pgn}
+                            onChange={(event) => setPgn(event.target.value)}
+                            placeholder={'[Event "Player 1 vs. Player 2"]\n[White "Player 1"]\n[Black "Player 2"]\n\n1. e4 e5 2. Nf3 Nc6...'}
+                        />
+
+                        <div className="card-footer">
+                            <span>{pgn.trim().length} caracteres</span>
+
+                            <button
+                                onClick={handleAnalyze}
+                                disabled={!pgn.trim() || isAnalyzing}
+                            >
+                                {isAnalyzing ? 'Analizando...' : 'Analizar partida'}
+                                <FontAwesomeIcon icon={faArrowRight} />
+                            </button>
                         </div>
-                    </div>
-
-                    < textarea
-                        value={pgn}
-                        onChange={(event) => setPgn(event.target.value)
-                        }
-                        placeholder={'[Event "Player 1 vs. Player 2"]\n[White "Player 1"]\n[Black "Player 2"]\n\n1. e4 e5 2. Nf3 Nc6...'}
-                    />
-
-                    <div className="card-footer" >
-                        <span>{pgn.trim().length} caracteres </span>
-
-                        <button
-                            onClick={handleAnalyze}
-                            disabled={!pgn.trim() || isAnalyzing}
-                        >
-                            {isAnalyzing ? 'Analizando...' : 'Analizar partida'}
-                            < FontAwesomeIcon icon={faArrowRight} />
-                        </button>
-                    </div>
-                </section>
+                    </section>
+                </div>
 
                 {error && (
                     <p className="error-message">{error}</p>
